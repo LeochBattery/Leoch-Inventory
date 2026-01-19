@@ -2,24 +2,31 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <img src="logo.png" alt="Leoch Logo" class="logo">
   <title>Leoch Inventory</title>
 
   <style>
-    .logo {
-    height: 120px;
-    margin-bottom: 1px;
-    }
-    
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
+      margin: 20px;
+      padding: 5px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    .logo {
+      height: 70px;
     }
 
     h2 {
-      margin-bottom: 5px;
+      margin: 0;
     }
-
+    
     #lastUpdated {
       color: #666;
       margin-bottom: 15px;
@@ -58,10 +65,16 @@
 
 <body>
 
-<h2>Leoch Inventory</h2>
+<!-- Header with Logo -->
+<div class="header">
+  <img src="logo.png" alt="Leoch Logo" class="logo">
+  <h2>Leoch Inventory</h2>
+</div>
+  
 <p id="lastUpdated"></p>
 
 <div class="filters">
+<!-- Search box -->
   <input
     type="text"
     id="search"
@@ -69,6 +82,7 @@
     onkeyup="applyFilters()"
   >
 
+<!-- Location dropdown -->
   <select id="locationFilter" onchange="applyFilters()">
     <option value="">All Locations</option>
   </select>
