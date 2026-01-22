@@ -125,7 +125,7 @@ function parseCSVLine(line) {
   return result.map(v => v.trim());
 }
 
-fetch("Inventory.csv")
+fetch("inventory.csv")
   .then(res => res.text())
   .then(text => {
     const lines = text
