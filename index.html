@@ -103,6 +103,18 @@
 <script>
 const locations = new Set();
 
+const locationMap = {
+  "Califonia": "Lake Forest, CA",
+  "Dallas": "Dallas, TX",
+  "CA AGED": "CA AGED",
+  "TX AGED": "TX AGED",
+  "LEC-Dallas": "LEC-Dallas"
+};
+
+function getDisplayLocation(rawLocation) {
+  return locationMap[rawLocation] || rawLocation;
+}
+  
 function parseCSVLine(line) {
   const result = [];
   let current = "";
@@ -165,7 +177,8 @@ fetch("Inventory.csv")
 
       const material = cols[materialIdx];
       const part     = cols[partIdx];
-      const location = cols[locationIdx];
+      const rawLocation = cols[locationIdx];
+      const location = getDisplayLocation(rawLocation);
 
       let qty = cols[qtyIdx]
         ?.replace(/"/g, "")
