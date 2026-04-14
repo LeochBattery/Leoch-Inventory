@@ -5,13 +5,14 @@
   <title>Leoch Inventory</title>
 
   <style>
+    /* Basic page style */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
       padding: 5px;
     }
 
-    /* Header */
+    /* Header area */
     .header {
       display: flex;
       align-items: center;
@@ -24,14 +25,16 @@
 
     .header h2 {
       margin: 0;
-      font-size: 32px
+      font-size: 32px;
     }
-    
+
+    /* Last updated text */
     #lastUpdated {
       color: #666;
       margin-bottom: 15px;
     }
 
+    /* Search and dropdown area */
     .filters {
       margin-bottom: 15px;
     }
@@ -42,6 +45,7 @@
       margin-right: 5px;
     }
 
+    /* Table style */
     table {
       border-collapse: collapse;
       width: 80%;
@@ -57,6 +61,7 @@
       background: #f2f2f2;
     }
 
+    /* Hide rows when filtered out */
     tr.hidden {
       display: none;
     }
@@ -65,177 +70,233 @@
 
 <body>
 
-<!-- Header with Logo -->
-<div class="header">
-  <img src="logo.png" alt="Leoch Logo" class="logo">
-  <h2>Leoch Inventory</h2>
-</div>
-  
-<p id="lastUpdated"></p>
+  <!-- Header with logo -->
+  <div class="header">
+    <img src="logo.png" alt="Leoch Logo" class="logo">
+    <h2>Leoch Inventory</h2>
+  </div>
 
-<div class="filters">
-<!-- Search box -->
-  <input
-    type="text"
-    id="search"
-    placeholder="Search by part number..."
-    onkeyup="applyFilters()"
-  >
+  <!-- Last update date from GitHub -->
+  <p id="lastUpdated"></p>
 
-<!-- Location dropdown -->
-  <select id="locationFilter" onchange="applyFilters()">
-    <option value="">All Locations</option>
-  </select>
-</div>
+  <!-- Search box and location filter -->
+  <div class="filters">
+    <input
+      type="text"
+      id="search"
+      placeholder="Search by part number..."
+      onkeyup="applyFilters()"
+    >
 
-<table id="inventoryTable">
-  <thead>
-    <tr>
-      <th>Material</th>
-      <th>Part Number</th>
-      <th>Location</th>
-      <th>Available Qty</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+    <select id="locationFilter" onchange="applyFilters()">
+      <option value="">All Locations</option>
+    </select>
+  </div>
 
-<script>
-const locations = new Set();
+  <!-- Inventory table -->
+  <table id="inventoryTable">
+    <thead>
+      <tr>
+        <th>Material</th>
+        <th>Part Number</th>
+        <th>Location</th>
+        <th>Available Qty</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-const locationMap = {
-  "Califonia": "Lake Forest, CA",
-  "Dallas": "Dallas, TX",
-  "CA AGED": "CA AGED",
-  "TX AGED": "TX AGED",
-  "LEC-Dallas": "LEC-Dallas"
-};
+  <!-- Excel reader library -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-function getDisplayLocation(rawLocation) {
-  return locationMap[rawLocation] || rawLocation;
-}
-  
-function parseCSVLine(line) {
-  const result = [];
-  let current = "";
-  let inQuotes = false;
+  <script>
+    /* Store displayed locations for dropdown */
+    const locations = new Set();
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+    /* Convert SAP location codes to website names */
+    const locationMap = {
+      "U001": "Lake Forest, CA",
+      "U008": "CA AGED",
+      "U009": "TX AGED",
+      "U024": "Dallas, TX"
+    };
 
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
-      result.push(current);
-      current = "";
-    } else {
-      current += char;
+    /* Only keep these SAP locations */
+    const allowedLocations = new Set(["U001", "U008", "U009", "U024"]);
+
+    /* Load one Excel file from GitHub */
+    async function loadExcel(file) {
+      const res = await fetch(file + "?v=" + Date.now());
+      const data = await res.arrayBuffer();
+
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+      return XLSX.utils.sheet_to_json(sheet);
     }
-  }
 
-  result.push(current);
-  return result.map(v => v.trim());
-}
+    /* Read inventory data, filter it, group it, and show it */
+    async function loadInventory() {
+      const files = ["N010.xlsx"];
+      const grouped = {};
 
-fetch("Inventory.csv")
-  .then(res => res.text())
-  .then(text => {
-    const lines = text
-      .split("\n")
-      .map(l => l.trim())
-      .filter(l => l.length);
+      for (const file of files) {
+        const rows = await loadExcel(file);
 
-    // --- Extract date from anywhere ---
-    const dateLine = lines.find(l => l.includes("Inventory List"));
-    if (dateLine) {
-      const dateMatch = dateLine.match(/(\d{2}\/\d{2}\/\d{4})/);
-      if (dateMatch) {
-        document.getElementById("lastUpdated").innerText =
-          "Last updated: " + dateMatch[1];
+        rows.forEach(row => {
+          /* Get needed columns from SAP */
+          const material = String(row["Material"] || "").trim();
+          const part = String(row["Leoch Part Number"] || "").trim();
+          const loc = String(row["Sto.Loction"] || "").trim();
+          const qty = parseFloat(row["Qty.Avail"]);
+
+          /* Keep only material codes starting with 10 or 11 */
+          if (!material || (!material.startsWith("10") && !material.startsWith("11"))) {
+            return;
+          }
+
+          /* Remove blank part numbers and part numbers starting with BRACKET */
+          if (!part || part.toUpperCase().startsWith("BRACKET")) {
+            return;
+          }
+
+          /* Keep only selected locations */
+          if (!allowedLocations.has(loc)) {
+            return;
+          }
+
+          /* Keep only rows with quantity greater than 0 */
+          if (!Number.isFinite(qty) || qty <= 0) {
+            return;
+          }
+
+          /* Group rows by material + location */
+          const key = material + "|" + loc;
+
+          if (!grouped[key]) {
+            grouped[key] = {
+              material: material,
+              part: part,
+              location: locationMap[loc] || loc,
+              qty: 0
+            };
+          }
+
+          /* Add quantity together for grouped rows */
+          grouped[key].qty += qty;
+        });
+      }
+
+      renderTable(grouped);
+    }
+
+    /* Get real file update date from GitHub commit history */
+    async function setLastUpdatedFromGitHub() {
+      const repo = "LeochBattery/Leoch-Inventory";
+      const files = ["N010.xlsx"];
+
+      let latestDate = null;
+
+      for (const file of files) {
+        const res = await fetch(
+          `https://api.github.com/repos/${repo}/commits?path=${encodeURIComponent(file)}&page=1&per_page=1`
+        );
+
+        if (!res.ok) {
+          console.error("GitHub API error for file:", file, res.status);
+          continue;
+        }
+
+        const data = await res.json();
+
+        if (Array.isArray(data) && data.length > 0) {
+          const commitDate = new Date(data[0].commit.committer.date);
+
+          if (!latestDate || commitDate > latestDate) {
+            latestDate = commitDate;
+          }
+        }
+      }
+
+      const el = document.getElementById("lastUpdated");
+
+      if (latestDate) {
+        const formatted =
+          String(latestDate.getMonth() + 1).padStart(2, "0") + "/" +
+          String(latestDate.getDate()).padStart(2, "0") + "/" +
+          latestDate.getFullYear();
+
+        el.innerText = "Last updated: " + formatted;
+      } else {
+        el.innerText = "Last updated: unavailable";
       }
     }
 
-    // --- Find header row (contains "Material") ---
-    const headerIndex = lines.findIndex(l => l.includes("Material"));
-    if (headerIndex === -1) return;
+    /* Show grouped inventory data in the table */
+    function renderTable(grouped) {
+      const tbody = document.querySelector("#inventoryTable tbody");
+      tbody.innerHTML = "";
+      locations.clear();
 
-    let headers = parseCSVLine(lines[headerIndex]);
-    while (headers[0] === "") headers.shift();
+      Object.values(grouped)
+        .sort((a, b) => a.part.localeCompare(b.part))
+        .forEach(item => {
+          locations.add(item.location);
 
-    const materialIdx = headers.indexOf("Material");
-    const partIdx     = headers.indexOf("Leoch Part Number");
-    const locationIdx = headers.indexOf("Sto.Loction");
-    const qtyIdx      = headers.indexOf("Qty.Avail");
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${item.material}</td>
+            <td>${item.part}</td>
+            <td>${item.location}</td>
+            <td>${item.qty.toLocaleString()}</td>
+          `;
 
-    const tbody = document.querySelector("#inventoryTable tbody");
-    tbody.innerHTML = "";
+          tbody.appendChild(tr);
+        });
 
-     /* ----- Parse Data Rows ----- */
-    lines.slice(headerIndex + 1).forEach(line => {
-      let cols = parseCSVLine(line);
-      while (cols.length && cols[0] === "") cols.shift();
+      populateLocationDropdown();
+    }
 
-      const material = cols[materialIdx];
-      const part     = cols[partIdx];
-      const rawLocation = cols[locationIdx];
-      const location = getDisplayLocation(rawLocation);
+    /* Fill the location dropdown based on shown data */
+    function populateLocationDropdown() {
+      const select = document.getElementById("locationFilter");
+      select.innerHTML = `<option value="">All Locations</option>`;
 
-      let qty = cols[qtyIdx]
-        ?.replace(/"/g, "")
-        .replace(/,/g, "");
+      Array.from(locations)
+        .sort()
+        .forEach(loc => {
+          const opt = document.createElement("option");
+          opt.value = loc;
+          opt.textContent = loc;
+          select.appendChild(opt);
+        });
+    }
 
-      qty = parseFloat(qty);
+    /* Filter table by part number search and location dropdown */
+    function applyFilters() {
+      const search = document.getElementById("search").value.toUpperCase();
+      const loc = document.getElementById("locationFilter").value;
 
-      if (!Number.isFinite(qty) || qty <= 0) return;
+      document.querySelectorAll("#inventoryTable tbody tr").forEach(row => {
+        const part = row.cells[1].innerText.toUpperCase();
+        const rowLoc = row.cells[2].innerText;
 
-      locations.add(location);
+        const show =
+          part.includes(search) &&
+          (!loc || rowLoc === loc);
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${material}</td>
-        <td>${part}</td>
-        <td>${location}</td>
-        <td>${qty.toLocaleString()}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+        row.classList.toggle("hidden", !show);
+      });
+    }
 
-    populateLocationDropdown();
-  });
+    /* Start page load */
+    async function init() {
+      await loadInventory();
+      await setLastUpdatedFromGitHub();
+    }
 
-function populateLocationDropdown() {
-  const select = document.getElementById("locationFilter");
-  select.innerHTML = `<option value="">All Locations</option>`;
-
-  Array.from(locations)
-    .sort()
-    .forEach(loc => {
-      const opt = document.createElement("option");
-      opt.value = loc;
-      opt.textContent = loc;
-      select.appendChild(opt);
-    });
-}
-
-function applyFilters() {
-  const search = document.getElementById("search").value.toUpperCase();
-  const loc    = document.getElementById("locationFilter").value;
-
-  document.querySelectorAll("#inventoryTable tbody tr")
-    .forEach(row => {
-      const part = row.cells[1].innerText.toUpperCase();
-      const rowLoc = row.cells[2].innerText;
-
-      const show =
-        part.includes(search) &&
-        (!loc || rowLoc === loc);
-
-      row.classList.toggle("hidden", !show);
-    });
-}
-</script>
-
-
+    init();
+  </script>
 
 </body>
 </html>
