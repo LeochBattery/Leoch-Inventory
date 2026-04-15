@@ -1,10 +1,10 @@
-# 📦 Leoch Inventory Website
+# Leoch Inventory Website
 
 This site displays daily inventory data from SAP.
 
 ---
 
-## 🔄 Daily Update Process
+## Daily Update Process
 
 Follow these steps every day to update inventory:
 
@@ -35,7 +35,7 @@ N010.xlsx
 
 ---
 
-### 4. Done ✅
+### 4. Done
 
 * Wait a few minutes to refresh the website and check the "Last Updated" date
 
@@ -66,13 +66,5 @@ N010.xlsx
   * Leoch Part Number
   * Sto.Loction
   * Qty.Avail
-
----
-
-## 👩‍💻 Notes
-
-* No manual sorting is required
-* No CSV conversion is needed
-* All processing is automatic
 
 ---
