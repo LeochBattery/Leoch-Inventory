@@ -4,7 +4,7 @@ This site displays daily inventory data from SAP.
 
 ---
 
-## Daily Update Process
+## Daily Update Steps
 
 Follow these steps every day to update inventory:
 
