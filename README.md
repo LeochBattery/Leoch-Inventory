@@ -1,4 +1,3 @@
-# Leoch-Inventory
 # 📦 Leoch Inventory Website
 
 This site displays daily inventory data from SAP.
@@ -44,7 +43,7 @@ N010.xlsx
 
 ## ⚠️ Important Rules
 
-* Do NOT change other codes
+* Do NOT change any codes
 * Always use the exact filename: `N010.xlsx`
 * Always click **Commit changes**
 * Do NOT rename the file
@@ -75,12 +74,5 @@ N010.xlsx
 * No manual sorting is required
 * No CSV conversion is needed
 * All processing is automatic
-
----
-
-## 🔐 Access
-
-You have been granted access as a collaborator.
-You do NOT need the account password.
 
 ---
