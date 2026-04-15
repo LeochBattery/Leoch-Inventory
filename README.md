@@ -24,7 +24,7 @@ Rename the file exactly to:
 N010.xlsx
 ```
 
-**"⚠️ The filename must match exactly "**
+⚠️ The filename must match exactly
 ---
 
 ### 3. Upload to GitHub
